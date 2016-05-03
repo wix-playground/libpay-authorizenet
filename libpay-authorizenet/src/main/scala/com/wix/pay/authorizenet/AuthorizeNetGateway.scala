@@ -109,14 +109,6 @@ class AuthorizeNetGateway(environment: Environment,
   }
 }
 
-
-
-object AuthorizeNetGateway {
-  val ID = "net.authorize"
-}
-
-
-
 /** An Extractor Object usable for Transaction's Result, matched if the result is an ''Error''.
   *
   * An Extractor Object is an object that has a method(s) called {{{unapply}}} as one of its members. The purpose
