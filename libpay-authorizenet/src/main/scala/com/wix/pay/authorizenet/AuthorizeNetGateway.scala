@@ -16,7 +16,7 @@ import net.authorize.aim.{Result, Transaction}
 import scala.util.{Failure, Success, Try}
 
 
-/** A subclass of the [[PaymentGateway]], for Authorize.Net gateway.
+/** A subclass of the `PaymentGateway`, for Authorize.Net gateway.
   *
   * @param environment
   *                    The environment the gateway operates in (e.g., production, test, etc.)
