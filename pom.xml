@@ -4,6 +4,7 @@
 
     <artifactId>libpay-authorizenet-all</artifactId>
     <packaging>pom</packaging>
+    <version>1.0.0-SNAPSHOT</version>
     <name>libpay Authorize.Net payment gateway adapter aggregator</name>
     <description>libpay module for Authorize.Net payment gateway</description>
 	
