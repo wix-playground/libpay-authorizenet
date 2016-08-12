@@ -28,7 +28,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
   trait Ctx extends Scope {
     val authorizationParser = new JsonAuthorizenetAuthorizationParser
     val helper = mock[AuthorizeNetGetewayHelper]
-    val environment = Environment.SANDBOX_TESTMODE
+    val environment = Environment.SANDBOX
     val authorizeNetGateway = new AuthorizeNetGateway(environment, helper, authorizationParser)
 
     val someMerchantKey = "merchant key"

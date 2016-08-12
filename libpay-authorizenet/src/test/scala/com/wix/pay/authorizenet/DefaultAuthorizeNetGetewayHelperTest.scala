@@ -32,7 +32,7 @@ class DefaultAuthorizeNetGetewayHelperTest extends SpecWithJUnit {
     val someCcNumber = "4012888818888"
     val someCcExpiration = YearMonth(2020, 12)
     val someCcCsc = "123"
-    val someMerchant = helper.createMerchant(Environment.SANDBOX_TESTMODE, aMerchantKey("kuki", "buki"))
+    val someMerchant = helper.createMerchant(Environment.SANDBOX, aMerchantKey("kuki", "buki"))
     val someCurrencyAmount = CurrencyAmount("USD", 33.3)
     val someCreditCard = CreditCard(
       someCcNumber,
