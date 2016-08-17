@@ -94,15 +94,15 @@ class AuthorizeNetGateway(environment: Environment,
           transactionResult.getTarget.getTransactionId
 
         case IsDeclined() | IsReview() =>
-          throw new PaymentRejectedException(
+          throw PaymentRejectedException(
             s"response code: ${transactionResult.getReasonResponseCode}, response text: ${transactionResult.getResponseText}")
 
         case IsError() =>
-          throw new PaymentErrorException(
+          throw PaymentErrorException(
             s"response code: ${transactionResult.getReasonResponseCode}, response text: ${transactionResult.getResponseText}")
 
         case _ =>
-          throw new PaymentException(
+          throw PaymentException(
             s"response code: ${transactionResult.getReasonResponseCode}, response text: ${transactionResult.getResponseText}")
       }
     }
