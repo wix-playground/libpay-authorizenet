@@ -9,9 +9,8 @@ package com.wix.pay.authorizenet
 
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.{CurrencyAmount, Customer, Deal}
-import com.wix.pay.{PaymentErrorException, PaymentException, PaymentGateway, PaymentRejectedException}
+import com.wix.pay.{PaymentErrorException, PaymentGateway}
 import net.authorize.Environment
-import net.authorize.aim.{Result, Transaction}
 
 import scala.util.{Failure, Success, Try}
 
@@ -39,13 +38,9 @@ class AuthorizeNetGateway(environment: Environment,
     val transaction = helper.createAuthorizeOnlyTransaction(merchant, currencyAmount, creditCard,deal,customer)
     val transactionResult = helper.postTransaction(merchant, transaction)
 
-    val transactionId = handleTransactionResult(transactionResult)
-
-    Try {
-      transactionId match {
-        case Success(id) => authorizationParser.stringify(AuthorizenetAuthorization(id))
-        case Failure(e) => throw e
-      }
+    TransactionResultTranslator.translateTransactionResult(transactionResult) match {
+      case Success(transactionId) => Success(authorizationParser.stringify(AuthorizenetAuthorization(transactionId)))
+      case Failure(e) => Failure(e)
     }
   }
 
@@ -59,7 +54,7 @@ class AuthorizeNetGateway(environment: Environment,
       case Success(authorization: AuthorizenetAuthorization) =>
         val transaction = helper.createCaptureTransaction(merchant, authorization.transactionId, amount)
         val transactionResult = helper.postTransaction(merchant, transaction)
-        handleTransactionResult(transactionResult)
+        TransactionResultTranslator.translateTransactionResult(transactionResult)
 
       case Failure(e) => Failure(new PaymentErrorException("Invalid authorizationKey format", e))
     }
@@ -74,7 +69,7 @@ class AuthorizeNetGateway(environment: Environment,
     val transaction = helper.createAuthorizeCaptureTransaction(merchant, currencyAmount, creditCard,deal,customer)
     val transactionResult = helper.postTransaction(merchant, transaction)
 
-    handleTransactionResult(transactionResult)
+    TransactionResultTranslator.translateTransactionResult(transactionResult)
   }
 
   override def voidAuthorization(merchantKey: String, authorizationKey: String): Try[String] = {
@@ -83,83 +78,7 @@ class AuthorizeNetGateway(environment: Environment,
     val transaction = helper.createVoidTransaction(merchant, authorization.transactionId)
     val transactionResult = helper.postTransaction(merchant, transaction)
 
-    handleTransactionResult(transactionResult)
-  }
-
-
-  private def handleTransactionResult(transactionResult: Result[Transaction]): Try[String] = {
-    Try {
-      transactionResult match {
-        case IsApproved() =>
-          transactionResult.getTarget.getTransactionId
-
-        case IsDeclined() | IsReview() =>
-          throw PaymentRejectedException(
-            s"response code: ${transactionResult.getReasonResponseCode}, response text: ${transactionResult.getResponseText}")
-
-        case IsError() =>
-          throw PaymentErrorException(
-            s"response code: ${transactionResult.getReasonResponseCode}, response text: ${transactionResult.getResponseText}")
-
-        case _ =>
-          throw PaymentException(
-            s"response code: ${transactionResult.getReasonResponseCode}, response text: ${transactionResult.getResponseText}")
-      }
-    }
+    TransactionResultTranslator.translateTransactionResult(transactionResult)
   }
 }
 
-/** An Extractor Object usable for Transaction's Result, matched if the result is an ''Error''.
-  *
-  * An Extractor Object is an object that has a method(s) called {{{unapply}}} as one of its members. The purpose
-  * of that {{{unapply}}} method is to match a value and take it apart.
-  *
-  * @author <a href="mailto:ohadr@wix.com">Raz, Ohad</a>
-  */
-object IsError {
-  def unapply(result: Result[Transaction]): Boolean = {
-    result.isError
-  }
-}
-
-
-/** An Extractor Object usable for Transaction's Result, matched if the result is ''Declined''.
-  *
-  * An Extractor Object is an object that has a method(s) called {{{unapply}}} as one of its members. The purpose
-  * of that {{{unapply}}} method is to match a value and take it apart.
-  *
-  * @author <a href="mailto:ohadr@wix.com">Raz, Ohad</a>
-  */
-object IsDeclined {
-  def unapply(result: Result[Transaction]): Boolean = {
-    result.isDeclined
-  }
-}
-
-
-/** An Extractor Object usable for Transaction's Result, matched if the result is held for ''Review''.
-  *
-  * An Extractor Object is an object that has a method(s) called {{{unapply}}} as one of its members. The purpose
-  * of that {{{unapply}}} method is to match a value and take it apart.
-  *
-  * @author <a href="mailto:ohadr@wix.com">Raz, Ohad</a>
-  */
-object IsReview {
-  def unapply(result: Result[Transaction]): Boolean = {
-    result.isReview
-  }
-}
-
-
-/** An Extractor Object usable for Transaction's Result, matched if the result is ''Approved''.
-  *
-  * An Extractor Object is an object that has a method(s) called {{{unapply}}} as one of its members. The purpose
-  * of that {{{unapply}}} method is to match a value and take it apart.
-  *
-  * @author <a href="mailto:ohadr@wix.com">Raz, Ohad</a>
-  */
-object IsApproved {
-  def unapply(result: Result[Transaction]): Boolean = {
-    result.isApproved
-  }
-}
