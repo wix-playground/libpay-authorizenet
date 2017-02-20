@@ -136,6 +136,7 @@ class DefaultAuthorizeNetGetewayHelper() extends AuthorizeNetGetewayHelper {
     val anetOrder = Order.createOrder()
 
     deal.invoiceId.foreach(anetOrder.setInvoiceNumber)
+    deal.invoiceId.foreach(anetOrder.setDescription)
 
     anetOrder.setOrderItems(convertToANetOrderItems(deal.orderItems))
     deal.includedCharges.foreach(charges =>
@@ -186,7 +187,7 @@ class DefaultAuthorizeNetGetewayHelper() extends AuthorizeNetGetewayHelper {
     aimTransaction
   }
 
-  override def postTransaction(merchant: Merchant, transaction: Transaction): Result[Transaction] = {
+    override def postTransaction(merchant: Merchant, transaction: Transaction): Result[Transaction] = {
     merchant.postTransaction(transaction).asInstanceOf[Result[Transaction]]
   }
 
