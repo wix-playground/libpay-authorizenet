@@ -4,7 +4,7 @@ import java.util.UUID
 
 import net.authorize.aim.{Result, Transaction}
 import net.authorize.data.creditcard.CreditCard
-import net.authorize.data.{Order, Customer => AnetCustomer, OrderItem => AuthorizeNetOrderItem, ShippingAddress => AutorizeNetShippingAddress}
+import net.authorize.data.{Order, OrderItem => AuthorizeNetOrderItem}
 import net.authorize.{Environment, Merchant, TransactionType}
 
 import scala.collection.JavaConversions._
@@ -19,11 +19,11 @@ object ClientApp extends App {
   aimTransaction.setDuplicateWindow(0)
 
   val orderItem = AuthorizeNetOrderItem.createOrderItem()
-  orderItem.setItemId("someItemId")
-  orderItem.setItemName("Some nice item")
-  orderItem.setItemDescription("Some item description")
+  orderItem.setItemId(UUID.randomUUID().toString.take(31))
+  orderItem.setItemName(UUID.randomUUID().toString.take(31))
+//  orderItem.setItemDescription(UUID.randomUUID().toString)
   orderItem.setItemQuantity("1")
-  orderItem.setItemPrice(BigDecimal(amount / 2).bigDecimal)
+//  orderItem.setItemPrice(BigDecimal(amount / 2).bigDecimal)
 
   val order = Order.createOrder()
   order.setOrderItems(Seq(orderItem))
