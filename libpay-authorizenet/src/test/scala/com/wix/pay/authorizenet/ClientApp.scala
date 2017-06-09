@@ -10,7 +10,7 @@ import net.authorize.{Environment, Merchant, TransactionType}
 import scala.collection.JavaConversions._
 
 object ClientApp extends App {
-  val merchant = Merchant.createMerchant(Environment.SANDBOX, "82ysS586CeKV", "7MgP96q9E54R47cD")
+  val merchant = Merchant.createMerchant(Environment.SANDBOX, "", "")
 
   val amount = 1.0
 
