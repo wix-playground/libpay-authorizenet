@@ -8,7 +8,7 @@ package com.wix.pay.authorizenet
 
 
 import com.wix.pay.creditcard.CreditCard
-import com.wix.pay.model.{CurrencyAmount, Customer, Deal}
+import com.wix.pay.model.{CurrencyAmount, Customer, Deal, Payment}
 import com.wix.pay.{PaymentErrorException, PaymentGateway}
 import net.authorize.Environment
 
@@ -31,11 +31,13 @@ class AuthorizeNetGateway(environment: Environment,
 
   override def authorize(merchantKey: String,
                          creditCard: CreditCard,
-                         currencyAmount: CurrencyAmount,
+                         payment: Payment,
                          customer: Option[Customer] = None,
                          deal: Option[Deal] = None): Try[String] = {
+    require(payment.installments == 1, "Authorize.net does not support installments")
+
     val merchant = helper.createMerchant(environment, merchantKey)
-    val transaction = helper.createAuthorizeOnlyTransaction(merchant, currencyAmount, creditCard,deal,customer)
+    val transaction = helper.createAuthorizeOnlyTransaction(merchant, payment.currencyAmount, creditCard,deal,customer)
     val transactionResult = helper.postTransaction(merchant, transaction)
 
     TransactionResultTranslator.translateTransactionResult(transactionResult) match {
@@ -62,11 +64,13 @@ class AuthorizeNetGateway(environment: Environment,
 
   override def sale(merchantKey: String,
                     creditCard: CreditCard,
-                    currencyAmount: CurrencyAmount,
+                    payment: Payment,
                     customer: Option[Customer] = None,
                     deal: Option[Deal] = None): Try[String] = {
+    require(payment.installments == 1, "Authorize.net does not support installments")
+
     val merchant = helper.createMerchant(environment, merchantKey)
-    val transaction = helper.createAuthorizeCaptureTransaction(merchant, currencyAmount, creditCard,deal,customer)
+    val transaction = helper.createAuthorizeCaptureTransaction(merchant, payment.currencyAmount, creditCard,deal,customer)
     val transactionResult = helper.postTransaction(merchant, transaction)
 
     TransactionResultTranslator.translateTransactionResult(transactionResult)

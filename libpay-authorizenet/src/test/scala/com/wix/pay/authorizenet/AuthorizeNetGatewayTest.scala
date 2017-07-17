@@ -8,10 +8,10 @@ package com.wix.pay.authorizenet
 
 
 import com.wix.pay.creditcard.{CreditCard, CreditCardOptionalFields, YearMonth}
-import com.wix.pay.model.CurrencyAmount
+import com.wix.pay.model.{CurrencyAmount, Payment}
 import com.wix.pay.{PaymentErrorException, PaymentRejectedException}
 import net.authorize.aim.{Result, Transaction}
-import net.authorize.{Environment, Merchant => AnetMetchant, ResponseCode, ResponseField}
+import net.authorize.{Environment, ResponseCode, ResponseField, Merchant => AnetMetchant}
 import org.specs2.matcher._
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecWithJUnit
@@ -34,6 +34,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
     val someMerchantKey = "merchant key"
     val someAnetMerchant = AnetMetchant.createMerchant(null, null, null)
     val someCurrencyAmount = CurrencyAmount("USD", 33.3)
+    val somePayment = Payment(someCurrencyAmount, 1)
     val someCreditCard = CreditCard(
       "4012888818888",
       YearMonth(2016, 12),
@@ -136,7 +137,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someAuthorizeTransaction) returns
         anApprovedTransactionResult(someTransactionId)
 
-      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, somePayment) must
         beASuccessfulTry(
           check = ===(someAuthorizationKey)
         )
@@ -152,7 +153,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someAuthorizeTransaction) returns
         aFailedTransactionResult(someRejectReasonCode, someRejectReasonText)
 
-      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, somePayment) must
         beAFailedTry.like {
           case e: PaymentRejectedException => e.message must beEqualTo(s"response code: RRC_${someRejectReasonCode}_$rejectResponseCode, response text: $someRejectReasonText")
         }
@@ -168,7 +169,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someAuthorizeTransaction) returns
         aReviewTransactionResult(someReviewReasonCode, someReviewReasonText)
 
-      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, somePayment) must
         beAFailedTry.like {
           case e: PaymentRejectedException => e.message must beEqualTo(s"response code: RRC_${reviewResponseCode}_$someReviewReasonCode, response text: $someReviewReasonText")
         }
@@ -184,7 +185,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someAuthorizeTransaction) returns
         anErrorTransactionResult(someErrorReasonCode, someErrorReasonText)
 
-      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.authorize(someMerchantKey, someCreditCard, somePayment) must
         beAFailedTry.like {
           case e: PaymentErrorException => e.message must beEqualTo(s"response code: RRC_${errorResponseCode}_$someErrorReasonCode, response text: $someErrorReasonText")
         }
@@ -281,7 +282,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someSaleTransaction) returns
         anApprovedTransactionResult(someTransactionId)
 
-      authorizeNetGateway.sale(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.sale(someMerchantKey, someCreditCard, somePayment) must
         beASuccessfulTry(check = ===(someTransactionId))
 
       validateHelperFlow(_ => one(helper)
@@ -295,7 +296,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someSaleTransaction) returns
         aFailedTransactionResult(someRejectReasonCode, someRejectReasonText)
 
-      authorizeNetGateway.sale(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.sale(someMerchantKey, someCreditCard, somePayment) must
         beAFailedTry.like {
           case e: PaymentRejectedException => e.message must beEqualTo(s"response code: RRC_${someRejectReasonCode}_$rejectResponseCode, response text: $someRejectReasonText")
         }
@@ -311,7 +312,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someSaleTransaction) returns
         aReviewTransactionResult(someReviewReasonCode, someReviewReasonText)
 
-      authorizeNetGateway.sale(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.sale(someMerchantKey, someCreditCard, somePayment) must
         beAFailedTry.like {
           case e: PaymentRejectedException => e.message must beEqualTo(s"response code: RRC_${reviewResponseCode}_$someReviewReasonCode, response text: $someReviewReasonText")
         }
@@ -327,7 +328,7 @@ class AuthorizeNetGatewayTest extends SpecWithJUnit with Mockito {
       helper.postTransaction(someCreatedAnetMerchant, someSaleTransaction) returns
         anErrorTransactionResult(someErrorReasonCode, someErrorReasonText)
 
-      authorizeNetGateway.sale(someMerchantKey, someCreditCard, someCurrencyAmount) must
+      authorizeNetGateway.sale(someMerchantKey, someCreditCard, somePayment) must
         beAFailedTry.like {
           case e: PaymentErrorException => e.message must beEqualTo(s"response code: RRC_${errorResponseCode}_$someErrorReasonCode, response text: $someErrorReasonText")
         }
