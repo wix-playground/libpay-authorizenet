@@ -58,7 +58,7 @@ class AuthorizeNetGateway(environment: Environment,
         val transactionResult = helper.postTransaction(merchant, transaction)
         TransactionResultTranslator.translateTransactionResult(transactionResult)
 
-      case Failure(e) => Failure(new PaymentErrorException("Invalid authorizationKey format", e))
+      case Failure(e) => Failure(PaymentErrorException("Invalid authorizationKey format", e))
     }
   }
 
