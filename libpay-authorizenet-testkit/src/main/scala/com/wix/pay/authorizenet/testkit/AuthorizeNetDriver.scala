@@ -30,6 +30,7 @@ class AuthorizeNetDriver(val port: Int) {
   def startAuthorizeNetProb() {
     authorizeGatewayProb.doStart()
   }
+  def start(): Unit = startAuthorizeNetProb()
 
   /** Stops Authorize.Net gateway HTTP Prob.
     * Should be called after all IT tests of Authorize.Net gateway had completed.
@@ -37,10 +38,12 @@ class AuthorizeNetDriver(val port: Int) {
   def stopAuthorizeNetProb() {
     authorizeGatewayProb.doStop()
   }
+  def stop(): Unit = stopAuthorizeNetProb()
 
   def resetAuthorizeNetProbe() = {
-    authorizeGatewayProb.handlers.clear()
+    authorizeGatewayProb.reset()
   }
+  def reset(): Unit = resetAuthorizeNetProbe()
 
   /** Encapsulates the details of an Authorize request.
     * Needs to be followed be [[AuthorizeCtx]]'s ''returns'' ''errors'' methods for actual stubbing.
