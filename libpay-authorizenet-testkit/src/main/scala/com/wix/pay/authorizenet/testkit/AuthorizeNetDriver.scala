@@ -8,6 +8,7 @@ package com.wix.pay.authorizenet.testkit
 
 
 import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe
+import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe.NotFoundHandler
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.CurrencyAmount
 import net.authorize.TransactionType
@@ -19,16 +20,14 @@ import spray.http._
   *
   * @author <a href="mailto:ohadr@wix.com">Raz, Ohad</a>
   */
-class AuthorizeNetDriver(val port: Int) {
-  val authorizeGatewayProb = new EmbeddedHttpProbe(
-    port,
-    EmbeddedHttpProbe.NotFoundHandler)
+class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
+  def this(port: Int) = this(new EmbeddedHttpProbe(port, NotFoundHandler))
 
   /** Starts Authorize.Net gateway HTTP Prob.
     * Should be called before the IT tests of Authorize.Net gateway starts
     */
   def startAuthorizeNetProb() {
-    authorizeGatewayProb.doStart()
+    probe.doStart()
   }
   def start(): Unit = startAuthorizeNetProb()
 
@@ -36,18 +35,18 @@ class AuthorizeNetDriver(val port: Int) {
     * Should be called after all IT tests of Authorize.Net gateway had completed.
     */
   def stopAuthorizeNetProb() {
-    authorizeGatewayProb.doStop()
+    probe.doStop()
   }
   def stop(): Unit = stopAuthorizeNetProb()
 
   def resetAuthorizeNetProbe() = {
-    authorizeGatewayProb.reset()
+    probe.reset()
   }
   def reset(): Unit = resetAuthorizeNetProbe()
 
   /** Encapsulates the details of an Authorize request.
     * Needs to be followed be [[AuthorizeCtx]]'s ''returns'' ''errors'' methods for actual stubbing.
-    * 
+    *
     * @param loginId
     *                Authorize.Net login API ID.
     * @param transactionKey
@@ -271,7 +270,7 @@ class AuthorizeNetDriver(val port: Int) {
 
 
   /** Context for the Authorize operation.
-    * 
+    *
     * @param loginId
     *                Authorize.Net login API ID.
     * @param transactionKey
@@ -287,7 +286,7 @@ class AuthorizeNetDriver(val port: Int) {
                      creditCard: Option[CreditCard]) extends Ctx(loginId, transactionKey) {
 
     override def returns(authorizationId: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -312,7 +311,7 @@ class AuthorizeNetDriver(val port: Int) {
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -364,7 +363,7 @@ class AuthorizeNetDriver(val port: Int) {
                    amount: Option[Double]) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -388,7 +387,7 @@ class AuthorizeNetDriver(val port: Int) {
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -433,7 +432,7 @@ class AuthorizeNetDriver(val port: Int) {
                 creditCard: Option[CreditCard]) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -458,7 +457,7 @@ class AuthorizeNetDriver(val port: Int) {
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -511,7 +510,7 @@ class AuthorizeNetDriver(val port: Int) {
                   amount: Option[Double] = None) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -535,7 +534,7 @@ class AuthorizeNetDriver(val port: Int) {
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -582,7 +581,7 @@ class AuthorizeNetDriver(val port: Int) {
                 refTransactionKey: Option[String] = None) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -604,7 +603,7 @@ class AuthorizeNetDriver(val port: Int) {
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -645,7 +644,7 @@ class AuthorizeNetDriver(val port: Int) {
                 authorizationKey: Option[String] = None) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
@@ -667,7 +666,7 @@ class AuthorizeNetDriver(val port: Int) {
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      authorizeGatewayProb.handlers += {
+      probe.handlers += {
         case HttpRequest(
         HttpMethods.POST,
         Uri.Path("/gateway/transact.dll"),
