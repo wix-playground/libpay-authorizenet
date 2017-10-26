@@ -8,7 +8,7 @@ package com.wix.pay.authorizenet
 
 
 import com.wix.pay.creditcard.CreditCard
-import com.wix.pay.model.{CurrencyAmount, Customer, Deal, Payment}
+import com.wix.pay.model.{Customer, Deal, Payment}
 import com.wix.pay.{PaymentErrorException, PaymentGateway}
 import net.authorize.Environment
 
