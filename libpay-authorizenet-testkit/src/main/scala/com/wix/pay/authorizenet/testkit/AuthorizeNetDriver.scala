@@ -7,12 +7,14 @@
 package com.wix.pay.authorizenet.testkit
 
 
-import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe
-import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe.NotFoundHandler
+import akka.http.scaladsl.model.Uri.Path
+import akka.http.scaladsl.model._
+import net.authorize.TransactionType
+import com.wix.e2e.http.api.StubWebServer
+import com.wix.e2e.http.client.extractors.HttpMessageExtractors._
+import com.wix.e2e.http.server.WebServerFactory._
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.CurrencyAmount
-import net.authorize.TransactionType
-import spray.http._
 
 
 /** This class is a driver for Authorize.Net gateway tests, introducing a higher lever language for stubbing requests
@@ -20,29 +22,21 @@ import spray.http._
   *
   * @author <a href="mailto:ohadr@wix.com">Raz, Ohad</a>
   */
-class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
-  def this(port: Int) = this(new EmbeddedHttpProbe(port, NotFoundHandler))
+class AuthorizeNetDriver(port: Int) {
+  private val server: StubWebServer = aStubWebServer.onPort(port).build
 
-  /** Starts Authorize.Net gateway HTTP Prob.
+  /** Starts Authorize.Net gateway HTTP Driver.
     * Should be called before the IT tests of Authorize.Net gateway starts
     */
-  def startAuthorizeNetProb() {
-    probe.doStart()
-  }
-  def start(): Unit = startAuthorizeNetProb()
+  def start(): Unit = server.start()
 
-  /** Stops Authorize.Net gateway HTTP Prob.
+  /** Stops Authorize.Net gateway HTTP Driver.
     * Should be called after all IT tests of Authorize.Net gateway had completed.
     */
-  def stopAuthorizeNetProb() {
-    probe.doStop()
-  }
-  def stop(): Unit = stopAuthorizeNetProb()
+  def stop(): Unit = server.stop()
 
-  def resetAuthorizeNetProbe() = {
-    probe.reset()
-  }
-  def reset(): Unit = resetAuthorizeNetProbe()
+  def reset(): Unit = server.replaceWith()
+
 
   /** Encapsulates the details of an Authorize request.
     * Needs to be followed be [[AuthorizeCtx]]'s ''returns'' ''errors'' methods for actual stubbing.
@@ -143,7 +137,7 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
     */
   def aVoidRequestFor(loginId: Option[String] = None,
                       transactionKey: Option[String] = None,
-                      refTransactionKey: Option[String] = None) = {
+                      refTransactionKey: Option[String] = None): VoidCtx = {
     new VoidCtx(loginId, transactionKey: Option[String], refTransactionKey)
   }
 
@@ -161,7 +155,7 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
     */
   def aVoidAuthorizationRequestFor(loginId: Option[String] = None,
                                    transactionKey: Option[String] = None,
-                                   authorizationKey: Option[String] = None) = {
+                                   authorizationKey: Option[String] = None): VoidAuthorizationCtx = {
     new VoidAuthorizationCtx(loginId, transactionKey: Option[String], authorizationKey)
   }
 
@@ -239,7 +233,7 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
 
     /** Verifies that the specified HTTP Entity matches the stubbed request. */
     val isStubbedRequestEntity: HttpEntity => Boolean = entity => {
-      val valuesMap = entity.asString.split('&')
+      val valuesMap = entity.extractAsString.split('&')
         .map {_.split('=')}
         .map {keyValue => keyValue(0) -> (if (keyValue.length > 1) keyValue(1) else "")}
         .toMap
@@ -286,48 +280,48 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
                      creditCard: Option[CreditCard]) extends Ctx(loginId, transactionKey) {
 
     override def returns(authorizationId: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCodeOK,
-                responseReasonCode = responseReasonCodeOK,
-                responseReasonText = responseReasonTextOK,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = authorizationId,
-                amount = currencyAmount.map(_.amount),
-                transactionType = TransactionType.AUTH_ONLY,
-                accountNum = creditCard.fold("")(_.number))))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCodeOK,
+                  responseReasonCode = responseReasonCodeOK,
+                  responseReasonText = responseReasonTextOK,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = authorizationId,
+                  amount = currencyAmount.map(_.amount),
+                  transactionType = TransactionType.AUTH_ONLY,
+                  accountNum = creditCard.fold("")(_.number))))
       }
     }
 
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCode,
-                responseReasonCode = responseReasonCode,
-                responseReasonText = responseReasonText,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = "",
-                transactionType = TransactionType.AUTH_ONLY)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCode,
+                  responseReasonCode = responseReasonCode,
+                  responseReasonText = responseReasonText,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = "",
+                  transactionType = TransactionType.AUTH_ONLY)))
       }
     }
 
@@ -363,47 +357,47 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
                    amount: Option[Double]) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCodeOK,
-                responseReasonCode = responseReasonCodeOK,
-                responseReasonText = responseReasonTextOK,
-                authorizationCode = refTransactionKey.getOrElse(""),
-                transactionId = transactionId,
-                amount = amount,
-                transactionType = TransactionType.PRIOR_AUTH_CAPTURE)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCodeOK,
+                  responseReasonCode = responseReasonCodeOK,
+                  responseReasonText = responseReasonTextOK,
+                  authorizationCode = refTransactionKey.getOrElse(""),
+                  transactionId = transactionId,
+                  amount = amount,
+                  transactionType = TransactionType.PRIOR_AUTH_CAPTURE)))
       }
     }
 
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCode,
-                responseReasonCode = responseReasonCode,
-                responseReasonText = responseReasonText,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = "",
-                transactionType = TransactionType.PRIOR_AUTH_CAPTURE)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCode,
+                  responseReasonCode = responseReasonCode,
+                  responseReasonText = responseReasonText,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = "",
+                  transactionType = TransactionType.PRIOR_AUTH_CAPTURE)))
       }
     }
 
@@ -432,48 +426,48 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
                 creditCard: Option[CreditCard]) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCodeOK,
-                responseReasonCode = responseReasonCodeOK,
-                responseReasonText = responseReasonTextOK,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = transactionId,
-                amount = currencyAmount.map(_.amount),
-                transactionType = TransactionType.AUTH_CAPTURE,
-                accountNum = creditCard.fold("")(_.number))))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCodeOK,
+                  responseReasonCode = responseReasonCodeOK,
+                  responseReasonText = responseReasonTextOK,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = transactionId,
+                  amount = currencyAmount.map(_.amount),
+                  transactionType = TransactionType.AUTH_CAPTURE,
+                  accountNum = creditCard.fold("")(_.number))))
       }
     }
 
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCode,
-                responseReasonCode = responseReasonCode,
-                responseReasonText = responseReasonText,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = "",
-                transactionType = TransactionType.AUTH_CAPTURE)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCode,
+                  responseReasonCode = responseReasonCode,
+                  responseReasonText = responseReasonText,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = "",
+                  transactionType = TransactionType.AUTH_CAPTURE)))
       }
     }
 
@@ -510,47 +504,47 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
                   amount: Option[Double] = None) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCodeOK,
-                responseReasonCode = responseReasonCodeOK,
-                responseReasonText = responseReasonTextOK,
-                transactionId = transactionId,
-                amount = amount,
-                transactionType = TransactionType.CREDIT,
-                accountNum = creditCard.fold("")(_.number))))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCodeOK,
+                  responseReasonCode = responseReasonCodeOK,
+                  responseReasonText = responseReasonTextOK,
+                  transactionId = transactionId,
+                  amount = amount,
+                  transactionType = TransactionType.CREDIT,
+                  accountNum = creditCard.fold("")(_.number))))
       }
     }
 
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCode,
-                responseReasonCode = responseReasonCode,
-                responseReasonText = responseReasonText,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = "",
-                transactionType = TransactionType.CREDIT)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCode,
+                  responseReasonCode = responseReasonCode,
+                  responseReasonText = responseReasonText,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = "",
+                  transactionType = TransactionType.CREDIT)))
       }
     }
 
@@ -581,45 +575,45 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
                 refTransactionKey: Option[String] = None) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCodeOK,
-                responseReasonCode = responseReasonCodeOK,
-                responseReasonText = responseReasonTextOK,
-                transactionId = transactionId,
-                transactionType = TransactionType.VOID)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCodeOK,
+                  responseReasonCode = responseReasonCodeOK,
+                  responseReasonText = responseReasonTextOK,
+                  transactionId = transactionId,
+                  transactionType = TransactionType.VOID)))
       }
     }
 
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCode,
-                responseReasonCode = responseReasonCode,
-                responseReasonText = responseReasonText,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = "",
-                transactionType = TransactionType.VOID)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCode,
+                  responseReasonCode = responseReasonCode,
+                  responseReasonText = responseReasonText,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = "",
+                  transactionType = TransactionType.VOID)))
       }
     }
 
@@ -644,45 +638,45 @@ class AuthorizeNetDriver(probe: EmbeddedHttpProbe) {
                 authorizationKey: Option[String] = None) extends Ctx(loginId, transactionKey) {
 
     override def returns(transactionId: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCodeOK,
-                responseReasonCode = responseReasonCodeOK,
-                responseReasonText = responseReasonTextOK,
-                transactionId = transactionId,
-                transactionType = TransactionType.VOID)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCodeOK,
+                  responseReasonCode = responseReasonCodeOK,
+                  responseReasonText = responseReasonTextOK,
+                  transactionId = transactionId,
+                  transactionType = TransactionType.VOID)))
       }
     }
 
     override def errors(responseCode: Int,
                         responseReasonCode: Int,
                         responseReasonText: String) {
-      probe.handlers += {
+      server.appendAll {
         case HttpRequest(
-        HttpMethods.POST,
-        Uri.Path("/gateway/transact.dll"),
-        _,
-        entity,
-        _) if isStubbedRequestEntity(entity) =>
-          HttpResponse(
-            status = StatusCodes.OK,
-            entity = HttpEntity(
-              response(
-                responseCode = responseCode,
-                responseReasonCode = responseReasonCode,
-                responseReasonText = responseReasonText,
-                authorizationCode = loginId.getOrElse(""),
-                transactionId = "",
-                transactionType = TransactionType.VOID)))
+          HttpMethods.POST,
+          Path("/gateway/transact.dll"),
+          _,
+          entity,
+          _) if isStubbedRequestEntity(entity) =>
+            HttpResponse(
+              status = StatusCodes.OK,
+              entity = HttpEntity(
+                response(
+                  responseCode = responseCode,
+                  responseReasonCode = responseReasonCode,
+                  responseReasonText = responseReasonText,
+                  authorizationCode = loginId.getOrElse(""),
+                  transactionId = "",
+                  transactionType = TransactionType.VOID)))
       }
     }
 
