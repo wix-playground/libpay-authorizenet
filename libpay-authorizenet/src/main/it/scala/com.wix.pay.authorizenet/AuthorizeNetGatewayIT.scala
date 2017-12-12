@@ -4,7 +4,7 @@ import com.wix.pay.{PaymentErrorException, PaymentRejectedException}
 import com.wix.pay.authorizenet.testkit.AuthorizeNetDriver
 import com.wix.pay.authorizenet.testkit.builders.AuthNetDomainTestBuilders._
 import com.wix.pay.creditcard.{CreditCard, CreditCardOptionalFields, YearMonth}
-import com.wix.pay.model.CurrencyAmount
+import com.wix.pay.model.{CurrencyAmount, Payment}
 import net.authorize.{Environment => AuthorizenetEnvironment}
 import org.specs2.mutable.SpecWithJUnit
 import org.specs2.specification.{AfterAll, BeforeAll, Scope}
@@ -15,7 +15,7 @@ class AuthorizeNetGatewayIT extends SpecWithJUnit with BeforeAll with AfterAll {
     "return approved response" in new ctx {
       givenAuthorizeApprovesTransaction
 
-      authNetGateway.sale(someMerchantKey, creditCard, someCurrencyAmount
+      authNetGateway.sale(someMerchantKey, creditCard, somePayment
       ) must beASuccessfulTry(
         check = ===(transactionId)
       )
@@ -24,7 +24,7 @@ class AuthorizeNetGatewayIT extends SpecWithJUnit with BeforeAll with AfterAll {
     "return decline response" in new ctx {
       givenAuthorizeDeclinesTransaction
 
-      authNetGateway.sale(someMerchantKey, invalidCreditCard, someCurrencyAmount
+      authNetGateway.sale(someMerchantKey, invalidCreditCard, somePayment
       ) must beAFailedTry(
         check = beAnInstanceOf[PaymentRejectedException]
       )
@@ -33,7 +33,7 @@ class AuthorizeNetGatewayIT extends SpecWithJUnit with BeforeAll with AfterAll {
     "return GatewayFailure response" in new ctx {
       givenAuthorizeFailsTransaction
 
-      authNetGateway.sale(someMerchantKey, creditCard, someCurrencyAmount
+      authNetGateway.sale(someMerchantKey, creditCard, somePayment
       ) must beAFailedTry(
         check = beAnInstanceOf[PaymentErrorException]
       )
@@ -49,7 +49,7 @@ class AuthorizeNetGatewayIT extends SpecWithJUnit with BeforeAll with AfterAll {
     val environment: AuthorizenetEnvironment = AuthorizenetEnvironment.createEnvironment(baseUrl, baseUrl)
     val authNetGateway = new AuthorizeNetGateway(environment)
 
-    authNetDriver.resetAuthorizeNetProbe()
+    authNetDriver.reset()
 
     val someLoginId = "someLogin"
     val someTransactionKey = "someTransactionKey"
@@ -58,6 +58,7 @@ class AuthorizeNetGatewayIT extends SpecWithJUnit with BeforeAll with AfterAll {
 
     val someAmount = 33.3
     val someCurrencyAmount = CurrencyAmount("USD", someAmount)
+    val somePayment = Payment(currencyAmount = CurrencyAmount("USD", someAmount))
 
     val creditCard = CreditCard(
       "4012888818888",
@@ -98,8 +99,8 @@ class AuthorizeNetGatewayIT extends SpecWithJUnit with BeforeAll with AfterAll {
   }
 
   def beforeAll() =
-    authNetDriver.startAuthorizeNetProb()
+    authNetDriver.start()
 
   def afterAll() =
-    authNetDriver.stopAuthorizeNetProb()
+    authNetDriver.stop()
 }

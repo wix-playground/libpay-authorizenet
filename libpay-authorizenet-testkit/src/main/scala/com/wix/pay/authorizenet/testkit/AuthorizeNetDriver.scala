@@ -22,8 +22,9 @@ import com.wix.pay.model.CurrencyAmount
   *
   * @author <a href="mailto:ohadr@wix.com">Raz, Ohad</a>
   */
-class AuthorizeNetDriver(port: Int) {
-  private val server: StubWebServer = aStubWebServer.onPort(port).build
+class AuthorizeNetDriver(server: StubWebServer) {
+
+  def this(port: Int) = this(aStubWebServer.onPort(port).build)
 
   /** Starts Authorize.Net gateway HTTP Driver.
     * Should be called before the IT tests of Authorize.Net gateway starts
