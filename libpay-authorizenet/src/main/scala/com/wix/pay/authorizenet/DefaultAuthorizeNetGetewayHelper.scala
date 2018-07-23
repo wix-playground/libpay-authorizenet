@@ -84,7 +84,7 @@ class DefaultAuthorizeNetGetewayHelper() extends AuthorizeNetGetewayHelper {
     billingAddress.flatMap(_.street) foreach authNetCustomer.setAddress
     billingAddress.flatMap(_.city) foreach authNetCustomer.setCity
     billingAddress.flatMap(_.state) foreach authNetCustomer.setState
-    billingAddress.flatMap(_.postalCode) foreach authNetCustomer.setZipPostalCode
+    Seq(billingAddress.flatMap(_.postalCode), creditCard.billingPostalCode).flatten.headOption foreach authNetCustomer.setZipPostalCode
     billingAddress.flatMap(_.countryCode.map(_.getDisplayCountry)) foreach authNetCustomer.setCountry
 
     authNetCustomer
