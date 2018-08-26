@@ -130,7 +130,7 @@ class DefaultAuthorizeNetGetewayHelperTest extends SpecWithJUnit {
           None
         } else {
           Some(Customer(
-            Some(Name(transaction.getCustomer.getFirstName, transaction.getCustomer.getLastName)),
+            name = Some(Name(transaction.getCustomer.getFirstName, transaction.getCustomer.getLastName)),
             phone = Option(transaction.getCustomer.getPhone),
             email = Option(transaction.getCustomer.getEmail),
             ipAddress = Option(transaction.getCustomer.getCustomerIP),
